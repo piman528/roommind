@@ -41,6 +41,10 @@ class TestCoverageGaps:
         entry_valid_cover_paused.unique_id = f"{DOMAIN}_living_room_cover_paused"
         entry_valid_cover_paused.entity_id = "binary_sensor.roommind_living_room_cover_paused"
 
+        entry_valid_target_climate = MagicMock()
+        entry_valid_target_climate.unique_id = f"{DOMAIN}_living_room_target"
+        entry_valid_target_climate.entity_id = "climate.roommind_living_room_target"
+
         # Orphaned: room no longer exists
         entry_orphaned_room = MagicMock()
         entry_orphaned_room.unique_id = f"{DOMAIN}_deleted_room_target_temp"
@@ -62,6 +66,7 @@ class TestCoverageGaps:
             entry_valid_mode,
             entry_valid_cover_auto,
             entry_valid_cover_paused,
+            entry_valid_target_climate,
             entry_orphaned_room,
             entry_other,
             entry_vacation,
@@ -99,11 +104,16 @@ class TestCoverageGaps:
         entry_valid.unique_id = f"{DOMAIN}_living_room_target_temp"
         entry_valid.entity_id = "sensor.roommind_living_room_target_temp"
 
+        entry_valid_target_climate = MagicMock()
+        entry_valid_target_climate.unique_id = f"{DOMAIN}_living_room_target"
+        entry_valid_target_climate.entity_id = "climate.roommind_living_room_target"
+
         mock_registry = MagicMock()
         mock_registry.entities.values.return_value = [
             entry_cover_auto,
             entry_cover_paused,
             entry_valid,
+            entry_valid_target_climate,
         ]
 
         with patch(
@@ -117,6 +127,7 @@ class TestCoverageGaps:
         assert "switch.roommind_living_room_cover_auto" in removed_ids
         assert "binary_sensor.roommind_living_room_cover_paused" in removed_ids
         assert "sensor.roommind_living_room_target_temp" not in removed_ids
+        assert "climate.roommind_living_room_target" not in removed_ids
 
     def test_cleanup_orphaned_entities_no_orphans(self, hass, mock_config_entry):
         """cleanup_orphaned_entities does nothing when all entities are valid."""
