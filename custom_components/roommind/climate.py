@@ -16,8 +16,9 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DEFAULT_COMFORT_TEMP, DOMAIN, OVERRIDE_CUSTOM
+from .const import DEFAULT_COMFORT_TEMP, DOMAIN, OVERRIDE_CUSTOM, make_roommind_context
 from .coordinator import RoomMindCoordinator
+from .utils.device_utils import get_ac_eids
 
 
 def _create_room_climates(
@@ -157,7 +158,7 @@ class RoomMindTargetClimate(CoordinatorEntity, ClimateEntity):
 
     _attr_has_entity_name = True
     _attr_icon = "mdi:thermostat"
-    _attr_hvac_modes = [HVACMode.OFF, HVACMode.HEAT_COOL, HVACMode.HEAT, HVACMode.COOL]
+    _attr_hvac_modes = [HVACMode.OFF, HVACMode.HEAT_COOL]
     _attr_supported_features = (
         ClimateEntityFeature.TARGET_TEMPERATURE_RANGE | ClimateEntityFeature.TURN_ON | ClimateEntityFeature.TURN_OFF
     )
@@ -184,11 +185,6 @@ class RoomMindTargetClimate(CoordinatorEntity, ClimateEntity):
         room = self._room()
         if not room.get("climate_control_enabled", True):
             return HVACMode.OFF
-        climate_mode = room.get("climate_mode", "auto")
-        if climate_mode == "heat_only":
-            return HVACMode.HEAT
-        if climate_mode == "cool_only":
-            return HVACMode.COOL
         return HVACMode.HEAT_COOL
 
     @property
@@ -238,18 +234,29 @@ class RoomMindTargetClimate(CoordinatorEntity, ClimateEntity):
         if hvac_mode not in (*self._attr_hvac_modes, HVACMode.AUTO):
             return
 
+        store = self.coordinator.hass.data[DOMAIN]["store"]
+        room = store.get_room(self._area_id) or {}
         if hvac_mode == HVACMode.OFF:
             changes: dict[str, Any] = {"climate_control_enabled": False}
-        elif hvac_mode == HVACMode.HEAT:
-            changes = {"climate_control_enabled": True, "climate_mode": "heat_only"}
-        elif hvac_mode == HVACMode.COOL:
-            changes = {"climate_control_enabled": True, "climate_mode": "cool_only"}
         else:
             changes = {"climate_control_enabled": True, "climate_mode": "auto"}
 
-        store = self.coordinator.hass.data[DOMAIN]["store"]
         await store.async_update_room(self._area_id, changes)
+        if hvac_mode == HVACMode.OFF:
+            await self._async_turn_off_acs(room)
         await self.coordinator.async_request_refresh()
+
+    async def _async_turn_off_acs(self, room: dict) -> None:
+        """Turn off AC devices when the target entity is switched off."""
+        ac_eids = list(dict.fromkeys([*get_ac_eids(room.get("devices", [])), *room.get("acs", [])]))
+        for entity_id in ac_eids:
+            await self.coordinator.hass.services.async_call(
+                "climate",
+                "set_hvac_mode",
+                {"entity_id": entity_id, "hvac_mode": "off"},
+                blocking=False,
+                context=make_roommind_context(),
+            )
 
     async def async_turn_on(self) -> None:
         """Enable automatic room climate control."""

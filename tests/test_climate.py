@@ -21,6 +21,7 @@ from custom_components.roommind.const import DEFAULT_COMFORT_TEMP, DOMAIN, OVERR
 def mock_coordinator():
     coordinator = MagicMock()
     coordinator.hass = MagicMock()
+    coordinator.hass.services.async_call = AsyncMock()
     coordinator.async_request_refresh = AsyncMock()
     store = MagicMock()
     coordinator.hass.data = {DOMAIN: {"store": store}}
@@ -244,10 +245,10 @@ def test_target_hvac_mode_from_room_settings(mock_coordinator):
     assert entity.hvac_mode == HVACMode.OFF
 
     store.get_room.return_value = {"climate_control_enabled": True, "climate_mode": "heat_only"}
-    assert entity.hvac_mode == HVACMode.HEAT
+    assert entity.hvac_mode == HVACMode.HEAT_COOL
 
     store.get_room.return_value = {"climate_control_enabled": True, "climate_mode": "cool_only"}
-    assert entity.hvac_mode == HVACMode.COOL
+    assert entity.hvac_mode == HVACMode.HEAT_COOL
 
     store.get_room.return_value = {"climate_control_enabled": True, "climate_mode": "auto"}
     assert entity.hvac_mode == HVACMode.HEAT_COOL
@@ -298,21 +299,43 @@ async def test_target_ignores_single_temperature(mock_coordinator):
 
 
 @pytest.mark.asyncio
-async def test_target_set_hvac_mode_updates_room_settings(mock_coordinator):
-    """Setting target climate HVAC mode updates room control settings."""
+async def test_target_rejects_heat_and_cool_modes(mock_coordinator):
+    """Target climate only accepts off and heat_cool modes."""
     coordinator, store = mock_coordinator
     store.async_update_room = AsyncMock()
     entity = RoomMindTargetClimate(coordinator, "living_room")
 
     await entity.async_set_hvac_mode(HVACMode.COOL)
 
+    store.async_update_room.assert_not_awaited()
+    coordinator.hass.services.async_call.assert_not_awaited()
+    coordinator.async_request_refresh.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_target_off_disables_control_and_turns_off_acs(mock_coordinator):
+    """Target OFF disables RoomMind control and powers off AC devices."""
+    coordinator, store = mock_coordinator
+    store.get_room.return_value = {
+        "devices": [{"entity_id": "climate.living_ac", "type": "ac"}],
+        "acs": ["climate.legacy_ac"],
+    }
+    store.async_update_room = AsyncMock()
+    entity = RoomMindTargetClimate(coordinator, "living_room")
+
+    await entity.async_set_hvac_mode(HVACMode.OFF)
+
     store.async_update_room.assert_awaited_once_with(
         "living_room",
         {
-            "climate_control_enabled": True,
-            "climate_mode": "cool_only",
+            "climate_control_enabled": False,
         },
     )
+    calls = coordinator.hass.services.async_call.await_args_list
+    assert [call.args[:3] for call in calls] == [
+        ("climate", "set_hvac_mode", {"entity_id": "climate.living_ac", "hvac_mode": "off"}),
+        ("climate", "set_hvac_mode", {"entity_id": "climate.legacy_ac", "hvac_mode": "off"}),
+    ]
     coordinator.async_request_refresh.assert_awaited_once()
 
 
