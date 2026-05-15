@@ -10,6 +10,7 @@ from homeassistant.components.climate import HVACMode
 
 from custom_components.roommind.climate import (
     RoomMindOverrideClimate,
+    RoomMindTargetClimate,
     _create_room_climates,
     async_setup_entry,
 )
@@ -28,11 +29,12 @@ def mock_coordinator():
 
 
 def test_create_room_climates(mock_coordinator):
-    """Factory creates exactly one climate entity per room."""
+    """Factory creates override and target climate entities per room."""
     coordinator, _ = mock_coordinator
     climates = _create_room_climates(coordinator, "living_room")
-    assert len(climates) == 1
+    assert len(climates) == 2
     assert isinstance(climates[0], RoomMindOverrideClimate)
+    assert isinstance(climates[1], RoomMindTargetClimate)
 
 
 def test_unique_id_and_entity_id(mock_coordinator):
@@ -41,6 +43,14 @@ def test_unique_id_and_entity_id(mock_coordinator):
     entity = RoomMindOverrideClimate(coordinator, "living_room")
     assert entity.unique_id == "roommind_living_room_override"
     assert entity.entity_id == "climate.roommind_living_room_override"
+
+
+def test_target_unique_id_and_entity_id(mock_coordinator):
+    """Target climate entity has correct unique_id and entity_id."""
+    coordinator, _ = mock_coordinator
+    entity = RoomMindTargetClimate(coordinator, "living_room")
+    assert entity.unique_id == "roommind_living_room_target"
+    assert entity.entity_id == "climate.roommind_living_room_target"
 
 
 def test_hvac_mode_off_when_no_override(mock_coordinator):
@@ -225,6 +235,72 @@ async def test_set_hvac_mode_auto_noop_when_override_exists(mock_coordinator):
     coordinator.async_request_refresh.assert_awaited_once()
 
 
+def test_target_hvac_mode_from_room_settings(mock_coordinator):
+    """Target climate maps room settings to HVAC modes."""
+    coordinator, store = mock_coordinator
+    entity = RoomMindTargetClimate(coordinator, "living_room")
+
+    store.get_room.return_value = {"climate_control_enabled": False}
+    assert entity.hvac_mode == HVACMode.OFF
+
+    store.get_room.return_value = {"climate_control_enabled": True, "climate_mode": "heat_only"}
+    assert entity.hvac_mode == HVACMode.HEAT
+
+    store.get_room.return_value = {"climate_control_enabled": True, "climate_mode": "cool_only"}
+    assert entity.hvac_mode == HVACMode.COOL
+
+    store.get_room.return_value = {"climate_control_enabled": True, "climate_mode": "auto"}
+    assert entity.hvac_mode == HVACMode.AUTO
+
+
+def test_target_temperature_range_from_room_settings(mock_coordinator):
+    """Target climate exposes persistent heat/cool comfort range."""
+    coordinator, store = mock_coordinator
+    store.get_room.return_value = {"comfort_heat": 20.0, "comfort_cool": 25.5}
+    entity = RoomMindTargetClimate(coordinator, "living_room")
+
+    assert entity.target_temperature_low == 20.0
+    assert entity.target_temperature_high == 25.5
+
+
+@pytest.mark.asyncio
+async def test_target_set_temperature_range(mock_coordinator):
+    """Setting target range persists comfort heat/cool values."""
+    coordinator, store = mock_coordinator
+    store.async_update_room = AsyncMock()
+    entity = RoomMindTargetClimate(coordinator, "living_room")
+
+    await entity.async_set_temperature(target_temp_low=19.0, target_temp_high=26.0)
+
+    store.async_update_room.assert_awaited_once_with(
+        "living_room",
+        {
+            "comfort_heat": 19.0,
+            "comfort_cool": 26.0,
+        },
+    )
+    coordinator.async_request_refresh.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_target_set_hvac_mode_updates_room_settings(mock_coordinator):
+    """Setting target climate HVAC mode updates room control settings."""
+    coordinator, store = mock_coordinator
+    store.async_update_room = AsyncMock()
+    entity = RoomMindTargetClimate(coordinator, "living_room")
+
+    await entity.async_set_hvac_mode(HVACMode.COOL)
+
+    store.async_update_room.assert_awaited_once_with(
+        "living_room",
+        {
+            "climate_control_enabled": True,
+            "climate_mode": "cool_only",
+        },
+    )
+    coordinator.async_request_refresh.assert_awaited_once()
+
+
 def test_hvac_mode_off_when_room_missing(mock_coordinator):
     """hvac_mode returns OFF when room doesn't exist in store."""
     coordinator, store = mock_coordinator
@@ -258,8 +334,9 @@ async def test_async_setup_entry_creates_entities_for_all_rooms():
     assert coordinator.async_add_climate_entities is async_add_entities
     async_add_entities.assert_called_once()
     entities = async_add_entities.call_args[0][0]
-    assert len(entities) == 2
-    assert all(isinstance(e, RoomMindOverrideClimate) for e in entities)
+    assert len(entities) == 4
+    assert sum(isinstance(e, RoomMindOverrideClimate) for e in entities) == 2
+    assert sum(isinstance(e, RoomMindTargetClimate) for e in entities) == 2
     assert "living_room" in coordinator._climate_entity_areas
     assert "bedroom" in coordinator._climate_entity_areas
 
