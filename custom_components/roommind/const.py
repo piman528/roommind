@@ -93,6 +93,11 @@ OUTDOOR_UNAVAILABLE_NOTIFICATION_ID = "roommind_outdoor_unavailable"
 # Prediction clamping: max °C change in one prediction step (prevents unrealistic jumps)
 MAX_PREDICTION_DELTA = 3.0
 
+# Predictive idle: when the learned model says the room can coast within the
+# comfort band for this long, avoid starting HVAC for tiny errors.
+PREDICTIVE_IDLE_MINUTES = 60.0
+PREDICTIVE_IDLE_MARGIN = 0.3
+
 # Valve protection (anti-seize): periodic cycling of idle TRV valves
 VALVE_PROTECTION_CHECK_CYCLES = 120  # ~1 hour — how often to scan for stale valves
 VALVE_PROTECTION_CYCLE_DURATION = 15  # seconds — minimum before closing (actual ≥ UPDATE_INTERVAL)

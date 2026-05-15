@@ -23,6 +23,8 @@ from ..const import (
     MODE_COOLING,
     MODE_HEATING,
     MODE_IDLE,
+    PREDICTIVE_IDLE_MARGIN,
+    PREDICTIVE_IDLE_MINUTES,
     TargetTemps,
     is_override_active,
     make_roommind_context,
@@ -844,6 +846,50 @@ class MPCController:
             q_occupancy=self.q_occupancy,
         )
 
+    def _idle_trajectory_stays_in_band(
+        self,
+        current_temp: float,
+        heat_target_series: list[float],
+        cool_target_series: list[float],
+        outdoor_series: list[float],
+        solar_series: list[float],
+        residual_series: list[float] | None,
+        occupancy_series: list[float],
+        minutes: float = PREDICTIVE_IDLE_MINUTES,
+    ) -> bool:
+        """Return True when idle prediction remains within target band long enough."""
+        blocks = min(
+            max(1, int(minutes / PLAN_DT_MINUTES)),
+            len(heat_target_series),
+            len(cool_target_series),
+            len(outdoor_series),
+            len(solar_series),
+            len(occupancy_series),
+        )
+        if blocks <= 0:
+            return False
+
+        model = self._model_manager.get_model(self._area_id)
+        predicted = current_temp
+        residual = residual_series or [0.0] * blocks
+        for i in range(blocks):
+            lower = min(heat_target_series[i], cool_target_series[i]) - PREDICTIVE_IDLE_MARGIN
+            upper = max(heat_target_series[i], cool_target_series[i]) + PREDICTIVE_IDLE_MARGIN
+            if predicted < lower or predicted > upper:
+                return False
+            predicted = model.predict(
+                predicted,
+                outdoor_series[i],
+                Q_active=0.0,
+                dt_minutes=PLAN_DT_MINUTES,
+                q_solar=solar_series[i] * self._shading_factor,
+                q_residual=residual[i] if i < len(residual) else 0.0,
+                q_occupancy=occupancy_series[i],
+            )
+            if predicted < lower or predicted > upper:
+                return False
+        return True
+
     def _evaluate_mpc(
         self,
         current_temp: float | None,
@@ -979,6 +1025,26 @@ class MPCController:
             elif not self._within_min_run(MODE_COOLING):
                 action = MODE_IDLE
                 power_fraction = 0.0
+
+        # Coasting guard: if the room is predicted to remain within its
+        # heat/cool band for a long horizon without HVAC, prefer turning the
+        # devices off instead of running for a marginal optimizer gain.
+        if (
+            action in (MODE_HEATING, MODE_COOLING)
+            and not self._within_min_run(action)
+            and self._idle_trajectory_stays_in_band(
+                current_temp,
+                heat_target_series,
+                cool_target_series,
+                outdoor_series,
+                solar_series,
+                residual_series,
+                occupancy_series,
+                minutes=max(PREDICTIVE_IDLE_MINUTES, guard_horizon_minutes),
+            )
+        ):
+            action = MODE_IDLE
+            power_fraction = 0.0
 
         return action, power_fraction
 

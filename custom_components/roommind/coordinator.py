@@ -604,6 +604,10 @@ class RoomMindCoordinator(DataUpdateCoordinator):
                 q_occupancy = 1.0
                 break
             # unavailable/unknown/off → skip (conservative: no occupancy heat)
+        if q_occupancy == 0.0 and settings.get("presence_enabled", False) and not presence_away:
+            presence_persons = room.get("presence_persons") or settings.get("presence_persons", [])
+            if presence_persons and not room.get("ignore_presence", False):
+                q_occupancy = 1.0
 
         # Determine and apply mode with MPC controller
         controller = MPCController(

@@ -467,6 +467,59 @@ def test_predict_idle_drift_uses_fallback_outdoor_temp():
     assert predicted == pytest.approx(expected, abs=0.01)
 
 
+def test_idle_trajectory_stays_in_band_for_flat_prediction():
+    """Coasting guard accepts a flat idle prediction inside the target band."""
+    hass = build_hass()
+    room = make_room()
+    mgr = RoomModelManager()
+    model = MagicMock()
+    model.predict.side_effect = lambda T_room, *args, **kwargs: T_room
+    mgr.get_model = MagicMock(return_value=model)
+    ctrl = MPCController(
+        hass,
+        room,
+        model_manager=mgr,
+        outdoor_temp=20.0,
+        settings={},
+        has_external_sensor=True,
+    )
+
+    assert ctrl._idle_trajectory_stays_in_band(
+        22.0,
+        [21.0] * 12,
+        [24.0] * 12,
+        [20.0] * 12,
+        [0.0] * 12,
+        None,
+        [0.0] * 12,
+    )
+
+
+def test_idle_trajectory_rejects_prediction_outside_band():
+    """Coasting guard rejects idle when current temperature is outside the band."""
+    hass = build_hass()
+    room = make_room()
+    mgr = RoomModelManager()
+    ctrl = MPCController(
+        hass,
+        room,
+        model_manager=mgr,
+        outdoor_temp=20.0,
+        settings={},
+        has_external_sensor=True,
+    )
+
+    assert not ctrl._idle_trajectory_stays_in_band(
+        20.0,
+        [21.0] * 12,
+        [24.0] * 12,
+        [20.0] * 12,
+        [0.0] * 12,
+        None,
+        [0.0] * 12,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Prediction-aware safety guard
 # ---------------------------------------------------------------------------

@@ -37,6 +37,7 @@ class TestPresenceDetection:
         room = data["rooms"]["living_room_abc12345"]
         assert room["target_temp"] == 17.0  # eco_temp
         assert room["presence_away"] is True
+        assert room["q_occupancy"] == 0.0
 
     @pytest.mark.asyncio
     async def test_someone_home_uses_schedule(self, hass, mock_config_entry):
@@ -56,6 +57,7 @@ class TestPresenceDetection:
         room = data["rooms"]["living_room_abc12345"]
         assert room["target_temp"] == 21.0  # comfort_temp
         assert room["presence_away"] is False
+        assert room["q_occupancy"] == 1.0
 
     @pytest.mark.asyncio
     async def test_override_beats_presence(self, hass, mock_config_entry):
