@@ -157,12 +157,9 @@ class RoomMindTargetClimate(CoordinatorEntity, ClimateEntity):
 
     _attr_has_entity_name = True
     _attr_icon = "mdi:thermostat"
-    _attr_hvac_modes = [HVACMode.OFF, HVACMode.AUTO, HVACMode.HEAT, HVACMode.COOL]
+    _attr_hvac_modes = [HVACMode.OFF, HVACMode.HEAT_COOL, HVACMode.HEAT, HVACMode.COOL]
     _attr_supported_features = (
-        ClimateEntityFeature.TARGET_TEMPERATURE
-        | ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
-        | ClimateEntityFeature.TURN_ON
-        | ClimateEntityFeature.TURN_OFF
+        ClimateEntityFeature.TARGET_TEMPERATURE_RANGE | ClimateEntityFeature.TURN_ON | ClimateEntityFeature.TURN_OFF
     )
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_target_temperature_step = 0.5
@@ -192,15 +189,7 @@ class RoomMindTargetClimate(CoordinatorEntity, ClimateEntity):
             return HVACMode.HEAT
         if climate_mode == "cool_only":
             return HVACMode.COOL
-        return HVACMode.AUTO
-
-    @property
-    def target_temperature(self) -> float | None:
-        """Return the target most relevant to the current mode."""
-        room = self._room()
-        if self.hvac_mode == HVACMode.COOL:
-            return float(room.get("comfort_cool", 24.0))
-        return float(room.get("comfort_heat", room.get("comfort_temp", DEFAULT_COMFORT_TEMP)))
+        return HVACMode.HEAT_COOL
 
     @property
     def target_temperature_low(self) -> float | None:
@@ -227,21 +216,15 @@ class RoomMindTargetClimate(CoordinatorEntity, ClimateEntity):
         return float(val) if isinstance(val, (int, float)) else None
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
-        """Persist target temperature or temperature range."""
+        """Persist the heat/cool comfort range."""
         changes: dict[str, float] = {}
         low = kwargs.get("target_temp_low")
         high = kwargs.get("target_temp_high")
-        temperature = kwargs.get("temperature")
 
         if low is not None:
             changes["comfort_heat"] = float(low)
         if high is not None:
             changes["comfort_cool"] = float(high)
-        if temperature is not None and not changes:
-            if self.hvac_mode == HVACMode.COOL:
-                changes["comfort_cool"] = float(temperature)
-            else:
-                changes["comfort_heat"] = float(temperature)
 
         if not changes:
             return
@@ -252,7 +235,7 @@ class RoomMindTargetClimate(CoordinatorEntity, ClimateEntity):
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set room climate control and persistent mode."""
-        if hvac_mode not in self._attr_hvac_modes:
+        if hvac_mode not in (*self._attr_hvac_modes, HVACMode.AUTO):
             return
 
         if hvac_mode == HVACMode.OFF:
@@ -270,7 +253,7 @@ class RoomMindTargetClimate(CoordinatorEntity, ClimateEntity):
 
     async def async_turn_on(self) -> None:
         """Enable automatic room climate control."""
-        await self.async_set_hvac_mode(HVACMode.AUTO)
+        await self.async_set_hvac_mode(HVACMode.HEAT_COOL)
 
     async def async_turn_off(self) -> None:
         """Disable automatic room climate control."""

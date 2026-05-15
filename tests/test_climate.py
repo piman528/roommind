@@ -6,7 +6,7 @@ import time
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from homeassistant.components.climate import HVACMode
+from homeassistant.components.climate import ClimateEntityFeature, HVACMode
 
 from custom_components.roommind.climate import (
     RoomMindOverrideClimate,
@@ -250,7 +250,7 @@ def test_target_hvac_mode_from_room_settings(mock_coordinator):
     assert entity.hvac_mode == HVACMode.COOL
 
     store.get_room.return_value = {"climate_control_enabled": True, "climate_mode": "auto"}
-    assert entity.hvac_mode == HVACMode.AUTO
+    assert entity.hvac_mode == HVACMode.HEAT_COOL
 
 
 def test_target_temperature_range_from_room_settings(mock_coordinator):
@@ -259,6 +259,8 @@ def test_target_temperature_range_from_room_settings(mock_coordinator):
     store.get_room.return_value = {"comfort_heat": 20.0, "comfort_cool": 25.5}
     entity = RoomMindTargetClimate(coordinator, "living_room")
 
+    assert entity.supported_features & ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
+    assert not entity.supported_features & ClimateEntityFeature.TARGET_TEMPERATURE
     assert entity.target_temperature_low == 20.0
     assert entity.target_temperature_high == 25.5
 
@@ -283,6 +285,19 @@ async def test_target_set_temperature_range(mock_coordinator):
 
 
 @pytest.mark.asyncio
+async def test_target_ignores_single_temperature(mock_coordinator):
+    """Target climate only edits the heat/cool range, not a single target."""
+    coordinator, store = mock_coordinator
+    store.async_update_room = AsyncMock()
+    entity = RoomMindTargetClimate(coordinator, "living_room")
+
+    await entity.async_set_temperature(temperature=25.0)
+
+    store.async_update_room.assert_not_awaited()
+    coordinator.async_request_refresh.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_target_set_hvac_mode_updates_room_settings(mock_coordinator):
     """Setting target climate HVAC mode updates room control settings."""
     coordinator, store = mock_coordinator
@@ -296,6 +311,25 @@ async def test_target_set_hvac_mode_updates_room_settings(mock_coordinator):
         {
             "climate_control_enabled": True,
             "climate_mode": "cool_only",
+        },
+    )
+    coordinator.async_request_refresh.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_target_heat_cool_mode_updates_room_auto(mock_coordinator):
+    """HA heat_cool mode maps to RoomMind auto mode."""
+    coordinator, store = mock_coordinator
+    store.async_update_room = AsyncMock()
+    entity = RoomMindTargetClimate(coordinator, "living_room")
+
+    await entity.async_set_hvac_mode(HVACMode.HEAT_COOL)
+
+    store.async_update_room.assert_awaited_once_with(
+        "living_room",
+        {
+            "climate_control_enabled": True,
+            "climate_mode": "auto",
         },
     )
     coordinator.async_request_refresh.assert_awaited_once()
