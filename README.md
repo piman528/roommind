@@ -1,22 +1,22 @@
 # Repository Coverage
 
-[Full report](https://htmlpreview.github.io/?https://github.com/snazzybean/roommind/blob/python-coverage-comment-action-data/htmlcov/index.html)
+[Full report](https://htmlpreview.github.io/?https://github.com/piman528/roommind/blob/python-coverage-comment-action-data/htmlcov/index.html)
 
 | Name                                                               |    Stmts |     Miss |   Cover |   Missing |
 |------------------------------------------------------------------- | -------: | -------: | ------: | --------: |
 | custom\_components/roommind/\_\_init\_\_.py                        |      107 |       83 |     22% |32-34, 40-61, 66-67, 73-111, 116-125, 130-153, 158-196 |
 | custom\_components/roommind/binary\_sensor.py                      |       37 |        0 |    100% |           |
-| custom\_components/roommind/climate.py                             |       87 |        0 |    100% |           |
+| custom\_components/roommind/climate.py                             |      175 |       22 |     87% |200-203, 220-227, 241-244, 247, 256, 259, 261, 265, 273, 277 |
 | custom\_components/roommind/config\_flow.py                        |       11 |       11 |      0% |      3-23 |
-| custom\_components/roommind/const.py                               |      112 |        0 |    100% |           |
+| custom\_components/roommind/const.py                               |      114 |        0 |    100% |           |
 | custom\_components/roommind/control/\_\_init\_\_.py                |        0 |        0 |    100% |           |
 | custom\_components/roommind/control/analytics\_simulator.py        |      191 |        0 |    100% |           |
-| custom\_components/roommind/control/mpc\_controller.py             |      835 |       57 |     93% |153-154, 160-161, 173-183, 455-457, 475-476, 510-513, 524-531, 544-545, 590, 889-891, 1095, 1159-1171, 1255-1256, 1262, 1343-1354, 1414-1415, 1516-1517, 1549-1550, 1656, 1658, 1672, 1677, 1682 |
+| custom\_components/roommind/control/mpc\_controller.py             |      854 |       60 |     93% |155-156, 162-163, 175-185, 457-459, 477-478, 512-515, 526-533, 546-547, 592, 870, 935-937, 1046-1047, 1161, 1225-1237, 1321-1322, 1328, 1409-1420, 1480-1481, 1582-1583, 1615-1616, 1722, 1724, 1738, 1743, 1748 |
 | custom\_components/roommind/control/mpc\_optimizer.py              |      186 |        0 |    100% |           |
 | custom\_components/roommind/control/residual\_heat.py              |       24 |        0 |    100% |           |
 | custom\_components/roommind/control/solar.py                       |       81 |        1 |     99% |        72 |
 | custom\_components/roommind/control/thermal\_model.py              |      442 |       17 |     96% |394, 863-878, 989, 1112, 1119-1123 |
-| custom\_components/roommind/coordinator.py                         |      857 |       54 |     94% |327-328, 602-605, 641, 786-787, 797, 799, 1196, 1237, 1295, 1520-1523, 1657-1659, 1663-1669, 1673, 1678, 1699, 1704, 1706, 1709, 1712, 1735, 1740-1745, 1749, 1782, 1784, 1787, 1790, 1806-1807, 1918, 1938-1946, 1964-1965, 1980-1985, 2002-2003 |
+| custom\_components/roommind/coordinator.py                         |      861 |       54 |     94% |327-328, 602-605, 645, 790-791, 801, 803, 1200, 1241, 1299, 1524-1527, 1661-1663, 1667-1673, 1677, 1682, 1703, 1708, 1710, 1713, 1716, 1739, 1744-1749, 1753, 1786, 1788, 1791, 1794, 1810-1811, 1922, 1942-1950, 1968-1969, 1984-1989, 2006-2007 |
 | custom\_components/roommind/diagnostics.py                         |      166 |        0 |    100% |           |
 | custom\_components/roommind/managers/\_\_init\_\_.py               |        0 |        0 |    100% |           |
 | custom\_components/roommind/managers/compressor\_group\_manager.py |      157 |        2 |     99% |  121, 184 |
@@ -45,7 +45,7 @@
 | custom\_components/roommind/utils/sensor\_utils.py                 |       29 |        1 |     97% |        25 |
 | custom\_components/roommind/utils/temp\_utils.py                   |       26 |        0 |    100% |           |
 | custom\_components/roommind/websocket\_api.py                      |      273 |        2 |     99% |   665-670 |
-| **TOTAL**                                                          | **5386** |  **245** | **95%** |           |
+| **TOTAL**                                                          | **5499** |  **270** | **95%** |           |
 
 
 ## Setup coverage badge
@@ -54,20 +54,20 @@ Below are examples of the badges you can use in your main branch `README` file.
 
 ### Direct image
 
-[![Coverage badge](https://raw.githubusercontent.com/snazzybean/roommind/python-coverage-comment-action-data/badge.svg)](https://htmlpreview.github.io/?https://github.com/snazzybean/roommind/blob/python-coverage-comment-action-data/htmlcov/index.html)
+[![Coverage badge](https://raw.githubusercontent.com/piman528/roommind/python-coverage-comment-action-data/badge.svg)](https://htmlpreview.github.io/?https://github.com/piman528/roommind/blob/python-coverage-comment-action-data/htmlcov/index.html)
 
 This is the one to use if your repository is private or if you don't want to customize anything.
 
 ### [Shields.io](https://shields.io) Json Endpoint
 
-[![Coverage badge](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/snazzybean/roommind/python-coverage-comment-action-data/endpoint.json)](https://htmlpreview.github.io/?https://github.com/snazzybean/roommind/blob/python-coverage-comment-action-data/htmlcov/index.html)
+[![Coverage badge](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/piman528/roommind/python-coverage-comment-action-data/endpoint.json)](https://htmlpreview.github.io/?https://github.com/piman528/roommind/blob/python-coverage-comment-action-data/htmlcov/index.html)
 
 Using this one will allow you to [customize](https://shields.io/endpoint) the look of your badge.
 It won't work with private repositories. It won't be refreshed more than once per five minutes.
 
 ### [Shields.io](https://shields.io) Dynamic Badge
 
-[![Coverage badge](https://img.shields.io/badge/dynamic/json?color=brightgreen&label=coverage&query=%24.message&url=https%3A%2F%2Fraw.githubusercontent.com%2Fsnazzybean%2Froommind%2Fpython-coverage-comment-action-data%2Fendpoint.json)](https://htmlpreview.github.io/?https://github.com/snazzybean/roommind/blob/python-coverage-comment-action-data/htmlcov/index.html)
+[![Coverage badge](https://img.shields.io/badge/dynamic/json?color=brightgreen&label=coverage&query=%24.message&url=https%3A%2F%2Fraw.githubusercontent.com%2Fpiman528%2Froommind%2Fpython-coverage-comment-action-data%2Fendpoint.json)](https://htmlpreview.github.io/?https://github.com/piman528/roommind/blob/python-coverage-comment-action-data/htmlcov/index.html)
 
 This one will always be the same color. It won't work for private repos. I'm not even sure why we included it.
 
